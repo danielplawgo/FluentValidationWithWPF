@@ -51,12 +51,7 @@ namespace FluentValidationWithWPF
 
             propertyChanged(this, new PropertyChangedEventArgs(propertyName));
         }
-
-        protected virtual void OnIsValidChanged()
-        {
-
-        }
-
+        
         protected void OnPropertyChanged<TProperty>(Expression<Func<TProperty>> propertyExpresion)
         {
             var property = propertyExpresion.Body as MemberExpression;
@@ -87,53 +82,50 @@ namespace FluentValidationWithWPF
             return expression;
         }
 
-        public string Error
+        public virtual ValidationResult SelfValidate()
         {
-            get
-            {
-                var validationResult = SelfValidate();
-
-                if (validationResult == null || validationResult.IsValid)
-                {
-                    return string.Empty;
-                }
-
-                StringBuilder sb = new StringBuilder();
-
-                foreach (var error in validationResult.Errors)
-                {
-                    sb.AppendLine(error.ErrorMessage);
-                    sb.AppendLine(Environment.NewLine);
-                }
-
-                return sb.ToString();
-            }
+            return new ValidationResult();
         }
 
-        public string this[string columnName]
+        private string GetValidationError(string property = null)
         {
-            get
+            var validationResult = SelfValidate();
+
+            if (validationResult == null || validationResult.IsValid)
             {
-                var validationResult = SelfValidate();
+                IsValid = true;
+                return string.Empty;
+            }
 
-                if (validationResult == null || validationResult.IsValid)
-                {
-                    IsValid = true;
-                    return string.Empty;
-                }
+            IsValid = false;
 
-                IsValid = false;
-
-                var results = validationResult.Errors.FirstOrDefault(e => e.PropertyName == columnName);
+            if (property == null)
+            {
+                return string.Join(Environment.NewLine, validationResult.Errors.Select(e => e.ErrorMessage));
+            }
+            else
+            {
+                var results = validationResult.Errors.FirstOrDefault(e => e.PropertyName == property);
 
                 return results != null ? results.ErrorMessage : string.Empty;
             }
         }
 
-        public virtual ValidationResult SelfValidate()
+        public string Error
         {
-            return new ValidationResult();
+            get
+            {
+                return GetValidationError();
+            }
         }
+
+        public string this[string property]
+        {
+            get
+            {
+                return GetValidationError(property);
+            }
+        }        
 
         public bool IsValid { get; private set; }
 
